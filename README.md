@@ -5,7 +5,7 @@ Duplicate files plugin for [Yazi](https://github.com/sxyazi/yazi) file manager, 
 > [!NOTE]
 > The latest release of Yazi is required at the moment.
 
-https://github.com/user-attachments/assets/eef8b77a-9b04-43d6-a836-28399f8a35b8
+https://github.com/user-attachments/assets/1d87bb52-d326-4720-834c-baac74008d7d
 
 ## Features
 
@@ -22,12 +22,13 @@ https://github.com/user-attachments/assets/eef8b77a-9b04-43d6-a836-28399f8a35b8
 - [jdupes](https://codeberg.org/jbruchon/jdupes) command-line tool
 
 ## Installation
-Using yazi package
+
+**Using yazi package manager:**
 ```sh
 ya pkg add mshnwq/dupes
 ```
 
-Using nix home-manager (recommended)
+**Using nix home-manager: (recommended)**
 ```nix
 { pkgs, ... }: {
   home.packages = with pkgs; [ jdupes ];
@@ -37,15 +38,15 @@ Using nix home-manager (recommended)
       dupes = pkgs.fetchFromGitHub {
         owner = "mshnwq";
         repo = "dupes.yazi";
-        rev = "main";
-        hash = "";
+        rev = "4666b6f299c2257c011f622319ae97fab8adbabe";
+        hash = "sha256-v9xuSY/i/trIHHbOPbijd0AmcUb2vufNL9BSjBE6+Vo=";
       };
     };
   };
 }
 ```
-or
 
+**Manual installation:**
 ```sh
 git clone https://github.com/mshnwq/dupes.yazi.git ~/.config/yazi/plugins/dupes.yazi
 ```
@@ -120,7 +121,6 @@ Shows what **would** be deleted using the same settings as apply mode. Files mar
 
 - Normal files: displayed normally (will be kept)
 - Files with red 'X': will be deleted
-- Hovered file with 'X' on black background: currently selected
 
 #### ⚠️ Apply Mode
 **DESTRUCTIVE OPERATION** - Permanently deletes duplicate files.
@@ -191,13 +191,6 @@ When `save_op = true`, results are saved to:
 - **dupes.txt**  - Text format (when destructive)
 
 Files are saved in the current working directory.
-
-## Visual Indicators
-
-The plugin adds a custom linemode to show which files will be deleted:
-
-- **No marker** - File will be kept
-- **Red 'X'**   - File will be deleted
 
 ## License
 

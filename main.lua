@@ -225,7 +225,7 @@ local function execute_command(cmdline, args)
 
 	ya.dbg(string.format("Executing: %s", full_cmd))
 
-	local cmd = Command("bash"):arg({ "-c", full_cmd }):stdout(Command.PIPED):stderr(Command.PIPED):output()
+	local cmd = Command(get_state("shell")):arg({ "-c", full_cmd }):stdout(Command.PIPED):stderr(Command.PIPED):output()
 
 	-- Log execution results
 	ya.dbg(string.format("Exit code: %s", tostring(cmd.status.code)))
@@ -411,6 +411,7 @@ function M:setup(opts)
 	set_state("save_op", opts.save_op or false)
 	set_state("auto_confirm", opts.auto_confirm or false)
 	set_state("cmdline", "jdupes")
+	set_state("shell", "bash")
 
 	ya.dbg("Dupes Plugin Setup: Starting profile processing")
 
