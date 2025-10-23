@@ -28,7 +28,20 @@ https://github.com/user-attachments/assets/1d87bb52-d326-4720-834c-baac74008d7d
 ya pkg add mshnwq/dupes
 ```
 
-**Using nix home-manager: (recommended)**
+**Using nix home-manager (nixpkgs): (recommended)**
+```nix
+{ pkgs, ... }: {
+  programs.yazi = {
+    enable = true;
+    plugins = {
+      # jdupes is self contained within
+      dupes = pkgs.yaziPlugins.dupes
+    };
+  };
+}
+```
+
+**Using nix home-manager (github):**
 ```nix
 { pkgs, ... }: {
   home.packages = with pkgs; [ jdupes ];
@@ -117,10 +130,10 @@ interactive = {
 }
 ```
 #### 🧪 Dry Run Mode (inherits apply mode)
-Shows what **would** be deleted using the same settings as apply mode. Files marked with a red 'X' will be deleted. The first file in each duplicate set is kept.
+Shows what **would** be deleted using the same settings as apply mode. Files marked 'X' will be deleted. The first file in each duplicate set is kept.
 
 - Normal files: displayed normally (will be kept)
-- Files with red 'X': will be deleted
+- Files marked 'X': will be deleted
 
 #### ⚠️ Apply Mode
 **DESTRUCTIVE OPERATION** - Permanently deletes duplicate files.
