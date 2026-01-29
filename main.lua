@@ -1,5 +1,5 @@
---- Dupes Plugin: Dynamic jdupes runner for Yazi file manager
---- @since 25.5.31
+--- Dupes Plugin: jdupes runner for Yazi file manager
+--- @since 26.1.22
 --- @description Finds and manages duplicate files using jdupes
 
 local M = {}
@@ -31,8 +31,8 @@ local get_cwd = ya.sync(function() return cx.active.current.cwd end)
 --- Display duplicate files in Yazi's file list
 --- @param _cwd string Current working directory
 --- @param data table Parsed JSON data from jdupes output
---- @param style boolean If true, shows dry-run preview with deletion markers
-local function display_dupes(_cwd, data, style)
+--- @param mark boolean If true, shows dry-run preview with deletion markers
+local function display_dupes(cwd, data, mark)
 	-- Validate input data structure
 	if not data or not data.matchSets then
 		ya.dbg("Invalid or missing matchSets in JSON data")
@@ -45,26 +45,39 @@ local function display_dupes(_cwd, data, style)
 		return
 	end
 
-	ya.dbg(string.format("Entering display_dupes, cwd: %s", _cwd))
+	ya.dbg(string.format("Entering display_dupes, cwd: %s", cwd))
 
 	-- Create unique ID for this file operation
 	local id = ya.id("ft")
+	cwd = cwd:into_search("Duplicates")
 
-	-- Set search context title based on mode
-	local cwd
-	if style then
-		cwd = _cwd:into_search("Duplicate files Dry Run Preview 'X means will be deleted'")
-	else
-		cwd = _cwd:into_search("Duplicate files")
-	end
+	-- Get mark bit based on yazi version
+	-- from yazi-fs/src/cha/kind.rs
+	local mark_bit = get_state("yazi_version") == "25.5.31" and tonumber("10000", 2) or tonumber("1000", 2)
 
-	-- Navigate to the search view
+	-- Navigate to search view and initialize empty file list
 	ya.emit("cd", { Url(cwd) })
-
-	-- Initialize empty file list
 	ya.emit("update_files", {
 		op = fs.op("part", { id = id, url = Url(cwd), files = {} }),
 	})
+
+	-- Helper function to create Cha object from template
+	local function _cha(_cha, kind)
+		return Cha {
+			kind = kind or 0,
+			mode = _cha.mode,
+			len = _cha.len,
+			dev = _cha.dev,
+			gid = _cha.gid,
+			uid = _cha.uid,
+			atime = _cha.atime,
+			btime = _cha.btime,
+			ctime = _cha.ctime,
+			mtime = _cha.mtime,
+			perm = _cha.perm,
+			nlink = 0,
+		}
+	end
 
 	-- Build file list from duplicate sets
 	local files = {}
@@ -74,57 +87,51 @@ local function display_dupes(_cwd, data, style)
 
 		-- Process each file in the duplicate set
 		for j, fileObj in ipairs(matchSet.fileList) do
-			local url = Url(cwd):join(fileObj.filePath)
+			local url = Url(fileObj.filePath)
 			local cha = fs.cha(url, true)
 
+			if not cha then
+				ya.dbg(string.format("[Dupes] Warning: Could not get file info for %s", url))
+				goto continue
+			end
+
 			local file
-			if style then
-				-- In dry-run mode, mark files for deletion (except first one)
-				if j == 1 then
-					-- First file in set: keep it (normal display)
-					file = File { url = url, cha = cha }
-				else
-					-- Subsequent files: mark as dummy (will be deleted)
-					local dcha = Cha {
-						kind = 16,
-						is_dummy = true,
-						len = cha.len,
-						gid = cha.gid,
-						uid = cha.uid,
-						atime = cha.atime,
-						btime = cha.btime,
-						mtime = cha.mtime,
-						perm = cha.perm,
-					}
-					file = File { url = url, cha = dcha }
-				end
+			-- In mark mode, only mark duplicates (keep first file unmarked)
+			if mark and j > 1 then
+				-- Mark subsequent files for deletion
+				file = File { url = url, cha = _cha(cha, mark_bit) }
 			else
-				-- Normal mode: display all files equally
-				file = File { url = url, cha = cha }
+				-- First file in set or non-mark mode: display normally
+				file = File { url = url, cha = _cha(cha) }
 			end
 
 			table.insert(files, file)
 			ya.dbg(string.format("[Dupes] Added file %s", file.url))
+
+			::continue::
 		end
 	end
 
-	-- Update the file list in Yazi
 	ya.emit("update_files", {
-		op = fs.op("part", { id = id, url = Url(cwd), files = files }),
+		op = fs.op("part", {
+			id = id,
+			url = Url(cwd),
+			files = files,
+			cha = fs.cha(cwd, true),
+		}),
 	})
 
-	-- NOTE: Finalization with 'done' operation breaks file ordering
-	-- Keeping these commented for future investigation
+	-- BUG: Finalizing with 'done' operation breaks file ordering :(
 	-- ya.emit("update_files", {
 	-- 	op = fs.op("done", {
 	-- 		id = id,
 	-- 		url = Url(cwd),
-	-- 		cha = Cha({ kind = 16, mode = tonumber("100644", 8) })
-	-- 	})
+	-- 		cha = Cha { dummy = dummy_bit, mode = fs.cha(cwd, true).mode },
+	-- 	}),
 	-- })
 
 	-- Show notification with results
-	local mode_text = style and " (DRY RUN)" or ""
+	local mode_text = mark and " (DRY RUN)" or ""
 	ya.notify {
 		title = "Dupes Plugin",
 		content = string.format("Found %d files%s", #files, mode_text),
@@ -412,8 +419,18 @@ function M:setup(opts)
 	set_state("auto_confirm", opts.auto_confirm or false)
 	set_state("cmdline", "jdupes")
 	set_state("shell", "bash")
+	local handle = io.popen("yazi --version 2>&1")
+	local version = handle:read("*a")
+	handle:close()
+	local version_number = version:match("Yazi ([%d%.]+)")
+	set_state("yazi_version", version_number or "unknown")
 
+	ya.dbg("Yazi version: " .. get_state("yazi_version"))
 	ya.dbg("Dupes Plugin Setup: Starting profile processing")
+
+	local t = th.dupes or {}
+	local mark_style = t.mark_style and ui.Style(t.mark_style) or ui.Style():fg("red")
+	local mark_sign = t.mark_sign or "X"
 
 	-- Process and store user-defined profiles
 	local profiles = {}
@@ -447,19 +464,33 @@ function M:setup(opts)
 	ya.dbg(string.format("Dupes Plugin Setup: Complete with %d profiles", profile_count))
 
 	-- Register custom linemode to show deletion markers
-	-- Priority 1500 ensures it runs before most other linemodes
 	Linemode:children_add(function(self)
 		if not self._file.cha.is_dummy then
 			-- Normal file: no marker
 			return ""
 		elseif self._file.is_hovered then
-			-- Hovered dummy file: show black background 'X'
-			return ui.Line { " ", ui.Span("X"):style(ui.Style():bg("black")) }
+			-- Hovered marker
+			return ui.Line { " ", ui.Span(mark_sign):style(ui.Style():bg("black")) }
 		else
-			-- Non-hovered dummy file: show red 'X'
-			return ui.Line({ " ", "X" }):style(ui.Style():fg("red"))
+			-- Non-hovered marker
+			return ui.Line({ " ", mark_sign }):style(mark_style)
 		end
-	end, 1500)
+	end, opts.order or 500)
+
+	function Entity:prefix()
+		local prefix
+		if get_state("yazi_version") == "25.5.31" then
+			prefix = self._file:prefix() or ""
+		elseif self._file.cha.nlink == 0 then
+			prefix = tostring(self._file.url):match("^(.*)/[^/]+$") or ""
+		else
+			prefix = self._file:prefix() or ""
+		end
+		return prefix ~= "" and prefix .. "/" or ""
+	end
+
+	-- TODO: remove search
+	-- function Header:cwd() return "" end
 end
 
 --- Main entry point when plugin is invoked
@@ -490,6 +521,7 @@ function M:entry(job)
 		local ov_args, ok = ya.input {
 			title = "Dupes Override - Enter custom args",
 			value = "-j",
+			pos = { "top-center", y = 3, w = 45 },
 			position = { "top-center", y = 3, w = 45 },
 		}
 
@@ -555,17 +587,19 @@ function M:entry(job)
 	-- Destructive operation - requires confirmation and runs dry preview first
 	-- ========================================================================
 	if profile_name == "apply" then
+		local body = ui.Text {
+			ui.Line(""),
+			ui.Line("This will DELETE duplicate files!"):style(ui.Style():fg("red")),
+			ui.Line("If unsure, try dry run first"):style(th.confirm.content),
+			ui.Line(""),
+		}
 		-- Check for auto-confirm or prompt user
 		local apply_confirm = get_state("auto_confirm")
 			or ya.confirm {
 				pos = { "center", y = -8, w = 36, h = 8 },
 				title = "Confirm Deduplication operation?",
-				content = ui.Text {
-					ui.Line(""),
-					ui.Line("This will DELETE duplicate files!"):style(ui.Style():fg("red")),
-					ui.Line("If unsure, try dry run first"):style(th.confirm.content),
-					ui.Line(""),
-				},
+				content = body,
+				body = body,
 			}
 
 		if not apply_confirm then

@@ -3,18 +3,18 @@
 Duplicate files plugin for [Yazi](https://github.com/sxyazi/yazi) file manager, leveraging [jdupes](https://codeberg.org/jbruchon/jdupes) for fast and efficient duplicate detection.
 
 > [!NOTE]
-> The latest release of Yazi is required at the moment.
+> Yazi v25.5.31+ is required at the moment.
 
-https://github.com/user-attachments/assets/1d87bb52-d326-4720-834c-baac74008d7d
+https://github.com/user-attachments/assets/9a0c4fac-0799-40a6-bf9c-f21260144189
 
 ## Features
 
-- 🔍 **Fast Duplicate Detection** - Uses jdupes for high-performance scanning
-- 👁️ **Visual Preview** - See duplicates directly in Yazi with deletion markers
-- 🧪 **Dry Run Mode** - Preview what will be deleted before applying changes
-- ⚙️ **Profile System** - Define custom scanning or override profiles for different use cases
-- 💾 **Export Results** - Save scan results to JSON or text files
-- 🔒 **Safe by Default** - Confirmation required for destructive operations
+- **Fast Duplicate Detection** - Uses jdupes for high-performance scanning
+- **Visual Preview** - See duplicates directly in Yazi with deletion markers
+- **Dry Run Mode** - Preview what will be deleted before applying changes
+- **Profile System** - Define custom scanning or override profiles for different use cases
+- **Export Results** - Save scan results to JSON or text files
+- **Safe by Default** - Confirmation required for destructive operations
 
 ## Requirements
 
@@ -51,8 +51,8 @@ ya pkg add mshnwq/dupes
       dupes = pkgs.fetchFromGitHub {
         owner = "mshnwq";
         repo = "dupes.yazi";
-        rev = "4666b6f299c2257c011f622319ae97fab8adbabe";
-        hash = "sha256-v9xuSY/i/trIHHbOPbijd0AmcUb2vufNL9BSjBE6+Vo=";
+        rev = "";
+        hash = "";
       };
     };
   };
@@ -68,6 +68,11 @@ git clone https://github.com/mshnwq/dupes.yazi.git ~/.config/yazi/plugins/dupes.
 
 Configuration in `~/.config/yazi/init.lua`:
 ```lua
+th.dupes = th.dupes or {}
+-- th.dupes.mark_style = ui.Style():fg("#FFFFFF")
+th.dupes.mark_style = ui.Style():fg("blue")
+th.dupes.mark_sign = "X"
+
 require("dupes"):setup {
 	-- Global settings
 	save_op = false,        -- Save results to file by default
@@ -94,22 +99,22 @@ require("dupes"):setup {
 Keybindings in `~/.config/yazi/keymap.toml`:
 ```toml
 [[manager.prepend_keymap]]
-on = ["<A-J>", "i"]
+on = ["<A-j>", "i"]
 run = "plugin dupes interactive"
 desc = "Run dupes interactive"
 
 [[manager.prepend_keymap]]
-on = ["<A-J>", "o"]
+on = ["<A-j>", "o"]
 run = "plugin dupes override"
 desc = "Run dupes override"
 
 [[manager.prepend_keymap]]
-on = ["<A-J>", "d"]
+on = ["<A-j>", "d"]
 run = "plugin dupes dry"
 desc = "Run dupes dry"
 
 [[manager.prepend_keymap]]
-on = ["<A-J>", "a"]
+on = ["<A-j>", "a"]
 run = "plugin dupes apply"
 desc = "Run dupes apply"
 
@@ -121,7 +126,7 @@ desc = "Run dupes apply"
 
 ### Profiles
 
-#### 🔍 Interactive Mode
+#### Interactive Mode
 Scans for duplicates and displays them in Yazi. Safe to use - no files are deleted.
 
 ```lua
@@ -129,13 +134,13 @@ interactive = {
 	args = { "-r" },  -- Recursive scan
 }
 ```
-#### 🧪 Dry Run Mode (inherits apply mode)
+#### Dry Run Mode (inherits apply mode)
 Shows what **would** be deleted using the same settings as apply mode. Files marked 'X' will be deleted. The first file in each duplicate set is kept.
 
 - Normal files: displayed normally (will be kept)
 - Files marked 'X': will be deleted
 
-#### ⚠️ Apply Mode
+#### Apply Mode
 **DESTRUCTIVE OPERATION** - Permanently deletes duplicate files.
 
 ```lua
@@ -145,7 +150,7 @@ apply = {
 }
 ```
 
-#### 🛠️ Override Mode
+#### Override Mode
 Opens an input dialog where you can enter custom jdupes arguments for one-time scans.
 
 **Example inputs:**
