@@ -98,22 +98,22 @@ require("dupes"):setup {
 
 Keybindings in `~/.config/yazi/keymap.toml`:
 ```toml
-[[manager.prepend_keymap]]
+[[mgr.prepend_keymap]]
 on = ["<A-j>", "i"]
 run = "plugin dupes interactive"
 desc = "Run dupes interactive"
 
-[[manager.prepend_keymap]]
+[[mgr.prepend_keymap]]
 on = ["<A-j>", "o"]
 run = "plugin dupes override"
 desc = "Run dupes override"
 
-[[manager.prepend_keymap]]
+[[mgr.prepend_keymap]]
 on = ["<A-j>", "d"]
 run = "plugin dupes dry"
 desc = "Run dupes dry"
 
-[[manager.prepend_keymap]]
+[[mgr.prepend_keymap]]
 on = ["<A-j>", "a"]
 run = "plugin dupes apply"
 desc = "Run dupes apply"
