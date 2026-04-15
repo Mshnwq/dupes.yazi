@@ -32,7 +32,8 @@ local get_cwd = ya.sync(function() return cx.active.current.cwd end)
 --- @param _cwd string Current working directory
 --- @param data table Parsed JSON data from jdupes output
 --- @param mark boolean If true, shows dry-run preview with deletion markers
-local function display_dupes(cwd, data, mark)
+--- @param mode_text string Optional label for notification (e.g. " (DRY RUN)")
+local function display_dupes(cwd, data, mark, mode_text)
 	-- Validate input data structure
 	if not data or not data.matchSets then
 		ya.dbg("Invalid or missing matchSets in JSON data")
@@ -131,7 +132,7 @@ local function display_dupes(cwd, data, mark)
 	-- })
 
 	-- Show notification with results
-	local mode_text = mark and " (DRY RUN)" or ""
+	local mode_text = mode_text or ""
 	ya.notify {
 		title = "Dupes Plugin",
 		content = string.format("Found %d files%s", #files, mode_text),
@@ -296,8 +297,9 @@ local function run_dupes(profile_name, conf, save_to_file, no_display, no_json)
 		if not no_display and not no_json then
 			local parsed_data = ya.json_decode(cmd.stdout)
 			if parsed_data then
-				local is_dry_run = (profile_name == "dry")
-				display_dupes(cwd, parsed_data, is_dry_run)
+				local mark = (profile_name == "dry" or profile_name == "interactive")
+				local mode_text = (profile_name == "dry") and " (DRY RUN)" or ""
+				display_dupes(cwd, parsed_data, mark, mode_text)
 			else
 				ya.err("Failed to parse JSON output from jdupes")
 				ya.notify {
