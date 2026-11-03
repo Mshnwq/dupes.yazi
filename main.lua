@@ -497,7 +497,7 @@ end
 --- @param job string|table Profile name or job configuration
 function M:entry(job)
 	-- Exit visual mode if active
-	ya.mgr_emit("escape", { visual = true })
+	ya.emit("escape", { visual = true })
 
 	-- Parse profile name from job argument
 	local profile_name = "interactive" -- default profile
